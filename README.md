@@ -5,7 +5,7 @@ A Gradle plugin that provides
 
 
 
-Release Process:
+## Release Process
 
 ```
 ORG_GRADLE_PROJECT_mavenCentralUsername=username
@@ -17,3 +17,6 @@ ORG_GRADLE_PROJECT_signingInMemoryKeyPassword=some_password
 
 ## TODO
 - MCP Client?
+- CI/CD
+- Console for arbitrary runs?
+- 

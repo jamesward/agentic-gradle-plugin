@@ -99,17 +99,9 @@ abstract class AgenticExtension(val project: org.gradle.api.Project) {
         }
     }
 
-    fun create(name: String, agenticTaskModelBuilder: AgenticTaskModel.() -> Unit) {
-        val agenticTaskModel = AgenticTaskModel()
-        agenticTaskModel.agenticTaskModelBuilder()
-        if (agenticTaskModel.prompt != null) {
-            project.tasks.register<AgenticTask>(name) {
-                prompt.set(agenticTaskModel.prompt)
-                validationTask.set(agenticTaskModel.validationTask)
-            }
-        }
-        else {
-            throw IllegalArgumentException("prompt must be set")
+    fun create(name: String, configuration: AgenticTask.() -> Unit) {
+        project.tasks.register<AgenticTask>(name) {
+            configuration()
         }
     }
 

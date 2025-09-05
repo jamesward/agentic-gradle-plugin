@@ -11,7 +11,6 @@ import kotlin.test.*
 
 class AgenticGradlePluginTest {
 
-    /*
     // todo: requires ANTHROPIC_API_KEY env var to be set
     @Test
     fun `runAgent can read and write files`(@TempDir tmpDir: File) {
@@ -26,12 +25,11 @@ class AgenticGradlePluginTest {
             }
 
             agentic {
-                provider = com.jamesward.agenticgradleplugin.Anthropic()
-            }
-
-            tasks.register<com.jamesward.agenticgradleplugin.AgenticTask>("hello") {
-                inputFile = layout.projectDirectory.file("README.md")
-                prompt = "add more details to the readme"
+                provider = anthropic()
+                create("hello") {
+                    inputFile = layout.projectDirectory.file("README.md")
+                    prompt = "add more details to the readme"
+                }
             }
         """.trimIndent())
 
@@ -39,9 +37,8 @@ class AgenticGradlePluginTest {
             .withProjectDir(tmpDir)
             .withArguments("hello")
             .withPluginClasspath()
+            .forwardOutput()
             .build()
-
-        println(result.output)
 
 //        println(readmeFile.readText())
 
@@ -49,7 +46,6 @@ class AgenticGradlePluginTest {
 
         assert(result.task(":hello")?.outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS)
     }
-    */
 
     // todo: have it fix something when validation fails
     // todo: requires ANTHROPIC_API_KEY env var to be set
@@ -107,7 +103,6 @@ class AgenticGradlePluginTest {
         assert(result.task(":doValidation")?.outcome == TaskOutcome.SUCCESS)
     }
 
-    /*
     // todo: requires ANTHROPIC_API_KEY env var to be set
     @Test
     fun `runAgent can run gradle tasks`(@TempDir tmpDir: File) {
@@ -161,9 +156,7 @@ class AgenticGradlePluginTest {
 
         assert(result.task(":runTask")?.outcome == TaskOutcome.SUCCESS)
     }
-     */
 
-    /*
     // todo: requires ANTHROPIC_API_KEY env var to be set
     @Test
     fun `runAgent can list gradle tasks`(@TempDir tmpDir: File) {
@@ -174,11 +167,11 @@ class AgenticGradlePluginTest {
             }
 
             agentic {
-                provider = com.jamesward.agenticgradleplugin.Anthropic()
-            }
-
-            tasks.register<com.jamesward.agenticgradleplugin.AgenticTask>("listTasks") {
-                prompt = "list the gradle tasks - just the task names"
+                provider = anthropic()
+                create("listTasks") {
+//                    debug = true
+                    prompt = "list the gradle tasks - just the task names"
+                }
             }
         """.trimIndent())
 
@@ -186,12 +179,12 @@ class AgenticGradlePluginTest {
             .withProjectDir(tmpDir)
             .withArguments("listTasks")
             .withPluginClasspath()
+            .forwardOutput()
             .build()
 
         assert(result.output.contains("dependencies"))
 
         assert(result.task(":listTasks")?.outcome == TaskOutcome.SUCCESS)
     }
-     */
 
 }

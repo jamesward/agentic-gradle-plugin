@@ -113,6 +113,12 @@ abstract class AgenticTask : DefaultTask() {
                 onToolCall { eventContext ->
                     logger.log(debugLogLevel, "AgenticTask: onToolCall: ${eventContext.tool.name} with args ${eventContext.toolArgs}")
                 }
+                onToolCallFailure {
+                    logger.log(debugLogLevel, "AgenticTask: onToolCallFailure: ${it.tool.name} with args ${it.toolArgs} ${it.throwable.message}")
+                }
+                onToolCallResult {
+                    logger.log(debugLogLevel, "AgenticTask: onToolCallResult: ${it.tool.name} with args ${it.toolArgs} returned ${it.result?.toStringDefault()}")
+                }
                 onBeforeLLMCall { eventContext ->
                     logger.log(debugLogLevel, "AgenticTask: onBeforeLLMCall: ${eventContext.prompt}")
                 }
@@ -122,11 +128,12 @@ abstract class AgenticTask : DefaultTask() {
             }
         }
 
-        // todo: stream output / iterations so the user see progress
-        runBlocking {
-            val output = agent.run(promptValue)
-            logger.log(debugLogLevel, "AgenticTask: output=$output")
+        // todo: stream output / iterations so the user see progress?
+        val output = runBlocking {
+            agent.run(promptValue)
         }
+
+        logger.lifecycle("AgenticTask: output=$output")
     }
 }
 

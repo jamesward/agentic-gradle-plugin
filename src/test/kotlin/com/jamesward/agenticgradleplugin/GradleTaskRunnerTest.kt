@@ -19,8 +19,8 @@ class GradleTaskRunnerTest {
 
         val result = GradleTaskRunner.run(tmpDir, "tasks")
 
-        assert(result.contains("Tasks runnable from root project"))
-        assert(!result.contains("compileJava - Compiles main Java source."))
+        assert(result.getOrThrow().contains("Tasks runnable from root project"))
+        assert(!result.getOrThrow().contains("compileJava - Compiles main Java source."))
     }
 
     @Test
@@ -35,7 +35,7 @@ class GradleTaskRunnerTest {
 
         val result = GradleTaskRunner.run(tmpDir, "asdf")
 
-        assert(result.contains("Task 'asdf' not found in root project"))
+        assert(result.getOrThrow().contains("Task 'asdf' not found in root project"))
     }
 
     // not sure yet how to test this as --all is not the right kind of argument

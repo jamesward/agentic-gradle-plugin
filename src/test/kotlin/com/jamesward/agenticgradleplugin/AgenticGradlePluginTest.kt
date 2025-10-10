@@ -10,6 +10,10 @@ import java.io.StringWriter
 import java.io.Writer
 import kotlin.test.*
 
+// todo: requires env vars for one of the providers:
+//    AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+//    ANTHROPIC_API_KEY
+//    OPENAI_API_KEY
 
 class AgenticGradlePluginTest {
 
@@ -45,12 +49,7 @@ class AgenticGradlePluginTest {
     }
 
     @Test
-    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
     fun `runAgent works with Bedrock`(@TempDir tmpDir: File) {
-        val readmeFile = tmpDir.resolve("README.md")
-        val readmeContents = "This is a readme"
-        readmeFile.writeText(readmeContents)
-
         val buildFile = tmpDir.resolve("build.gradle.kts")
         buildFile.writeText("""
             plugins {
@@ -58,7 +57,6 @@ class AgenticGradlePluginTest {
             }
 
             agentic {
-                provider = bedrock()
                 create("hello") {
                     prompt = "say hello"
                 }
@@ -74,7 +72,7 @@ class AgenticGradlePluginTest {
             .forwardStdOutput(stdout)
             .build()
 
-        assert(result.output.lowercase().contains("hello"))
+        assert(result.output.contains("AgenticTask: output=Hello", ignoreCase = true))
 
         assert(result.task(":hello")?.outcome == TaskOutcome.SUCCESS)
     }
@@ -93,9 +91,7 @@ class AgenticGradlePluginTest {
             }
 
             agentic {
-                provider = bedrock()
                 create("hello") {
-                    debug = true
                     inputFile = layout.projectDirectory.file("README.md")
                     prompt = "add more details to the readme"
                 }
@@ -116,6 +112,90 @@ class AgenticGradlePluginTest {
         assert(result.task(":hello")?.outcome == TaskOutcome.SUCCESS)
     }
 
+    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
+    @Test
+    fun `runAgent can run gradle tasks`(@TempDir tmpDir: File) {
+
+        createGradleConfigForTestsThatCallGradleTasks(tmpDir) {
+            """
+                create("runTask") {
+                    debug = true
+                    prompt = "run the 'classes' gradle task"
+                }
+            """
+            }
+
+        val result = GradleRunner.create()
+            .withProjectDir(tmpDir)
+            .withArguments("runTask")
+            .forwardOutput()
+            .build()
+
+        assert(result.output.contains("Task :classes UP-TO-DATE"))
+        assert(result.output.contains("BUILD SUCCESSFUL"))
+
+        assert(result.task(":runTask")?.outcome == TaskOutcome.SUCCESS)
+    }
+
+
+    @Test
+    fun `runAgent can run gradle tasks that fail`(@TempDir tmpDir: File) {
+        val javaSrcDir = tmpDir.resolve("src/main/java")
+        javaSrcDir.mkdirs()
+        val javaSrc = javaSrcDir.resolve("Foo.java")
+        javaSrc.writeText("bad java")
+
+        createGradleConfigForTestsThatCallGradleTasks(tmpDir) {
+            """
+                create("runTask") {
+                    debug = true
+                    prompt = "run the 'classes' gradle task"
+                }
+            """
+        }
+
+        val result = GradleRunner.create()
+            .withProjectDir(tmpDir)
+            .withArguments("runTask")
+            .forwardOutput()
+            .build()
+
+        assert(result.output.contains("Task :classes UP-TO-DATE"))
+        assert(result.output.contains("BUILD SUCCESSFUL"))
+
+        assert(result.task(":runTask")?.outcome == TaskOutcome.SUCCESS)
+    }
+
+    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
+    @Test
+    fun `runAgent can list gradle tasks`(@TempDir tmpDir: File) {
+
+        val buildFile = tmpDir.resolve("build.gradle.kts")
+        buildFile.writeText("""
+            plugins {
+                id("com.jamesward.agentic-gradle-plugin")
+            }
+
+            agentic {
+                create("listTasks") {
+                    debug = true
+                    prompt = "list the gradle tasks - just the task names"
+                }
+            }
+        """.trimIndent())
+
+        val result = GradleRunner.create()
+            .withProjectDir(tmpDir)
+            .withArguments("listTasks")
+            .withPluginClasspath()
+            .forwardOutput()
+            .build()
+
+        assert(result.output.contains("dependencies"))
+
+        assert(result.task(":listTasks")?.outcome == TaskOutcome.SUCCESS)
+    }
+
     // todo: have it fix something when validation fails
     // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
     @Test
@@ -123,7 +203,6 @@ class AgenticGradlePluginTest {
 
         createGradleConfigForTestsThatCallGradleTasks(tmpDir) {
             """
-                provider = bedrock()
                 create("doValidation") {
                     debug = true
                     prompt = "say hello"
@@ -142,62 +221,6 @@ class AgenticGradlePluginTest {
         assert(result.output.contains("BUILD SUCCESSFUL"))
 
         assert(result.task(":doValidation")?.outcome == TaskOutcome.SUCCESS)
-    }
-
-    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
-    @Test
-    fun `runAgent can run gradle tasks`(@TempDir tmpDir: File) {
-
-        createGradleConfigForTestsThatCallGradleTasks(tmpDir) {
-            """
-                provider = bedrock()
-                create("runTask") {
-                    debug = true
-                    prompt = "run the 'classes' gradle task"
-                }
-            """
-            }
-
-        val result = GradleRunner.create()
-            .withProjectDir(tmpDir)
-            .withArguments("runTask")
-            .forwardOutput()
-            .build()
-
-        assert(result.output.contains("BUILD SUCCESSFUL"))
-
-        assert(result.task(":runTask")?.outcome == TaskOutcome.SUCCESS)
-    }
-
-    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
-    @Test
-    fun `runAgent can list gradle tasks`(@TempDir tmpDir: File) {
-
-        val buildFile = tmpDir.resolve("build.gradle.kts")
-        buildFile.writeText("""
-            plugins {
-                id("com.jamesward.agentic-gradle-plugin")
-            }
-
-            agentic {
-                provider = bedrock()
-                create("listTasks") {
-                    debug = true
-                    prompt = "list the gradle tasks - just the task names"
-                }
-            }
-        """.trimIndent())
-
-        val result = GradleRunner.create()
-            .withProjectDir(tmpDir)
-            .withArguments("listTasks")
-            .withPluginClasspath()
-            .forwardOutput()
-            .build()
-
-        assert(result.output.contains("dependencies"))
-
-        assert(result.task(":listTasks")?.outcome == TaskOutcome.SUCCESS)
     }
 
 }

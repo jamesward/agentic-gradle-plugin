@@ -33,7 +33,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("ai.koog:koog-agents:0.4.1")
+    implementation("ai.koog:koog-agents:0.5.0")
 
     testImplementation(embeddedKotlin("test"))
     testImplementation(gradleTestKit())

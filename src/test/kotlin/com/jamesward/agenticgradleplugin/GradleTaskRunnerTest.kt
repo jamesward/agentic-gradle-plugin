@@ -16,7 +16,6 @@ class GradleTaskRunnerTest {
             }
         """.trimIndent())
 
-
         val result = GradleTaskRunner.run(tmpDir, "tasks")
 
         assert(result.getOrThrow().contains("Tasks runnable from root project"))
@@ -33,9 +32,12 @@ class GradleTaskRunnerTest {
         """.trimIndent())
 
 
-        val result = GradleTaskRunner.run(tmpDir, "asdf")
+        val result = runCatching { GradleTaskRunner.run(tmpDir, "asdf").getOrThrow() }
 
-        assert(result.getOrThrow().contains("Task 'asdf' not found in root project"))
+        println(result.exceptionOrNull())
+
+        assert(!result.exceptionOrNull()!!.message!!.contains("Could not execute build using connection to Gradle distribution"))
+        assert(result.exceptionOrNull()!!.message!!.contains("Task 'asdf' not found in root project"))
     }
 
     // not sure yet how to test this as --all is not the right kind of argument

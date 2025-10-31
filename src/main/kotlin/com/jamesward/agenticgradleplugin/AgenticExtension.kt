@@ -2,13 +2,17 @@ package com.jamesward.agenticgradleplugin
 
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.bedrock.BedrockClientSettings
+import ai.koog.prompt.executor.clients.bedrock.BedrockLLMClient
 import ai.koog.prompt.executor.clients.bedrock.BedrockModels
 import ai.koog.prompt.executor.clients.openai.OpenAIModels
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.executor.llms.all.simpleAnthropicExecutor
 import ai.koog.prompt.executor.llms.all.simpleBedrockExecutor
 import ai.koog.prompt.executor.llms.all.simpleOpenAIExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
+import aws.sdk.kotlin.services.bedrockruntime.BedrockRuntimeClient
+import kotlinx.coroutines.runBlocking
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.register
 
@@ -33,6 +37,7 @@ private data class Anthropic(
 }
 
 private data class Bedrock(
+    val awsBearerTokenBedrock: String?,
     val awsAccessKeyId: String?,
     val awsSecretAccessKey: String?,
     val awsSessionToken: String?,
@@ -40,27 +45,35 @@ private data class Bedrock(
     val region: String?,
 ) : AIProvider {
     override val executor: PromptExecutor by lazy {
+        val maybeAwsBearerTokenBedrock: String? = awsBearerTokenBedrock ?: System.getenv("AWS_BEARER_TOKEN_BEDROCK")
         val maybeAwsAccessKeyId: String? = awsAccessKeyId ?: System.getenv("AWS_ACCESS_KEY_ID")
         val maybeAwsSecretAccessKey: String? = awsSecretAccessKey ?: System.getenv("AWS_SECRET_ACCESS_KEY")
         val maybeAwsSessionToken: String? = awsSessionToken ?: System.getenv("AWS_SESSION_TOKEN")
-        if (maybeAwsAccessKeyId == null) {
-            throw IllegalArgumentException("You must either provide an AWS access key ID or set the AWS_ACCESS_KEY_ID environment variable")
-        } else if (maybeAwsSecretAccessKey == null) {
-            throw IllegalArgumentException("You must either provide an AWS secret access key or set the AWS_SECRET_ACCESS_KEY environment variable")
-        } else {
-            if (region != null)
-                simpleBedrockExecutor(
-                    maybeAwsAccessKeyId,
-                    maybeAwsSecretAccessKey,
-                    maybeAwsSessionToken,
-                    BedrockClientSettings(region = region)
-                )
-            else
-                simpleBedrockExecutor(maybeAwsAccessKeyId, maybeAwsSecretAccessKey, awsSessionToken)
+
+        if (maybeAwsBearerTokenBedrock == null) {
+            if (maybeAwsAccessKeyId == null) {
+                throw IllegalArgumentException("You must either provide an AWS Bearer Token for Bedrock (direct or env var AWS_BEARER_TOKEN_BEDROCK) or an AWS access key ID (direct or env var AWS_ACCESS_KEY_ID")
+            } else if (maybeAwsSecretAccessKey == null) {
+                throw IllegalArgumentException("You must either provide an AWS secret access key or set the AWS_SECRET_ACCESS_KEY environment variable")
+            } else {
+                if (region != null)
+                    simpleBedrockExecutor(
+                        maybeAwsAccessKeyId,
+                        maybeAwsSecretAccessKey,
+                        maybeAwsSessionToken,
+                        BedrockClientSettings(region = region)
+                    )
+                else
+                    simpleBedrockExecutor(maybeAwsAccessKeyId, maybeAwsSecretAccessKey, awsSessionToken)
+            }
+        }
+        else {
+            val bedrockRuntimeClient = runBlocking { BedrockRuntimeClient.fromEnvironment() }
+            SingleLLMPromptExecutor(BedrockLLMClient(bedrockRuntimeClient))
         }
     }
 
-    override fun toString(): String = "Bedrock(awsAccessKeyId='${awsAccessKeyId?.take(3)}*********', awsSecretAccessKey='${awsSecretAccessKey?.take(3)}*********', awsSessionToken='${awsSessionToken?.take(3)}*********', model=$model)"
+    override fun toString(): String = "Bedrock(awsBearerTokenBedrock='${awsBearerTokenBedrock?.take(3)}*********', awsAccessKeyId='${awsAccessKeyId?.take(3)}*********', awsSecretAccessKey='${awsSecretAccessKey?.take(3)}*********', awsSessionToken='${awsSessionToken?.take(3)}*********', model=$model, region=$region)"
 }
 
 private data class OpenAI(
@@ -90,11 +103,11 @@ abstract class AgenticExtension(val project: org.gradle.api.Project) {
             Anthropic(apiKey, AnthropicModels.Sonnet_4)
     }
 
-    fun bedrock(awsAccessKeyId: String? = null, awsSecretAccessKey: String? = null, awsSessionToken: String? = null, model: LLModel? = null, region: String? = null): AIProvider = run {
+    fun bedrock(awsBearerTokenBedrock: String? = null, awsAccessKeyId: String? = null, awsSecretAccessKey: String? = null, awsSessionToken: String? = null, model: LLModel? = null, region: String? = null): AIProvider = run {
         if (model != null)
-            Bedrock(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, model, region)
+            Bedrock(awsBearerTokenBedrock, awsAccessKeyId, awsSecretAccessKey, awsSessionToken, model, region)
         else
-            Bedrock(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BedrockModels.AmazonNovaPro, region)
+            Bedrock(awsBearerTokenBedrock, awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BedrockModels.AmazonNovaPro, region)
     }
 
     fun openai(apiKey: String? = null, model: LLModel? = null): AIProvider = run {

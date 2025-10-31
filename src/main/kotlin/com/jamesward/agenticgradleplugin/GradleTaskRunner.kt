@@ -54,7 +54,7 @@ object GradleTaskRunner {
                         catch (e: Throwable) {
                             Result.Failure(
                                 """
-                                    Gradle task '$task' failed: ${e.message}
+                                    Gradle task '$task' failed.
                                     
                                     Output:
                                     $stdOut

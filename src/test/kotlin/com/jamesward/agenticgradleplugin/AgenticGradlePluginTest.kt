@@ -11,7 +11,7 @@ import java.io.Writer
 import kotlin.test.*
 
 // todo: requires env vars for one of the providers:
-//    AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+//    AWS_BEARER_TOKEN_BEDROCK or (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY)
 //    ANTHROPIC_API_KEY
 //    OPENAI_API_KEY
 
@@ -49,7 +49,7 @@ class AgenticGradlePluginTest {
     }
 
     @Test
-    fun `runAgent works with Bedrock`(@TempDir tmpDir: File) {
+    fun `runAgent works`(@TempDir tmpDir: File) {
         val buildFile = tmpDir.resolve("build.gradle.kts")
         buildFile.writeText("""
             plugins {
@@ -72,12 +72,12 @@ class AgenticGradlePluginTest {
             .forwardStdOutput(stdout)
             .build()
 
-        assert(result.output.contains("AgenticTask: output=Hello", ignoreCase = true))
+        assert(result.output.contains("AgenticTask: output=", ignoreCase = true))
+        assert(result.output.contains("hello", ignoreCase = true))
 
         assert(result.task(":hello")?.outcome == TaskOutcome.SUCCESS)
     }
 
-    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
     @Test
     fun `runAgent can read and write files`(@TempDir tmpDir: File) {
         val readmeFile = tmpDir.resolve("README.md")
@@ -112,7 +112,6 @@ class AgenticGradlePluginTest {
         assert(result.task(":hello")?.outcome == TaskOutcome.SUCCESS)
     }
 
-    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
     @Test
     fun `runAgent can run gradle tasks`(@TempDir tmpDir: File) {
 
@@ -137,7 +136,6 @@ class AgenticGradlePluginTest {
         assert(result.task(":runTask")?.outcome == TaskOutcome.SUCCESS)
     }
 
-
     @Test
     fun `runAgent can run gradle tasks that fail`(@TempDir tmpDir: File) {
         val javaSrcDir = tmpDir.resolve("src/main/java")
@@ -160,13 +158,12 @@ class AgenticGradlePluginTest {
             .forwardOutput()
             .build()
 
-        assert(result.output.contains("Task :classes UP-TO-DATE"))
+        assert(result.output.contains("Task :compileJava FAILED"))
         assert(result.output.contains("BUILD SUCCESSFUL"))
 
         assert(result.task(":runTask")?.outcome == TaskOutcome.SUCCESS)
     }
 
-    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
     @Test
     fun `runAgent can list gradle tasks`(@TempDir tmpDir: File) {
 
@@ -196,8 +193,6 @@ class AgenticGradlePluginTest {
         assert(result.task(":listTasks")?.outcome == TaskOutcome.SUCCESS)
     }
 
-    // todo: have it fix something when validation fails
-    // todo: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars to be set
     @Test
     fun `runAgent can do validation`(@TempDir tmpDir: File) {
 

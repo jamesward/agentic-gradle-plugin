@@ -1,44 +1,45 @@
 # Agentic Gradle Plugin
 
-A Gradle plugin that provides 
+Gradle tasks driven by AI! What could go wrong?
 
-
-
-## Mermaid diagram for userPrompt graph
-
-The following Mermaid diagram reflects the graph defined in AgenticTask.kt for the userPrompt subgraph.
-
-```mermaid
-flowchart TD
-  subgraph userPrompt
-    Start([nodeStart])
-    CallLLM[nodeCallLLM]
-    ExecuteTools[executeToolCall]
-    SendToolResult[sendToolResult]
-    Finish([nodeFinish])
-
-    Start --> CallLLM
-    CallLLM -- onMultipleToolCalls: true --> ExecuteTools
-    CallLLM -- onMultipleAssistantMessages: true<br/>transform: first content --> Finish
-
-    ExecuteTools --> SendToolResult
-    SendToolResult -- onMultipleToolCalls: true --> ExecuteTools
-    SendToolResult -- onMultipleAssistantMessages: true<br/>transform: first content --> Finish
-  end
+Add the plugin:
+```kotlin
+id("com.jamesward.agentic-gradle-plugin") version "0.0.1"
 ```
 
-## Release Process
+Define your agentic task:
 
+```kotlin
+agentic {
+    create("genCalc") {
+        debug = true
+        prompt = "create a java class that adds numbers and create the test for it."
+        validationTask = "test"
+    }
+}
 ```
-ORG_GRADLE_PROJECT_mavenCentralUsername=username
-ORG_GRADLE_PROJECT_mavenCentralPassword=the_password
 
-ORG_GRADLE_PROJECT_signingInMemoryKey=exported_ascii_armored_key
-ORG_GRADLE_PROJECT_signingInMemoryKeyPassword=some_password
+Set your AI provider API keys in env vars, or explicitly by setting a provider:
+```kotlin
+agentic {
+    provider = anthropic(apiKey = "yours")
+    // or
+    provider = bedrock(awsBearerTokenBedrock = "yours")
+    // or
+    provider = bedrock(awsAccessKeyId = "yours", awsSecretAccessKey = "yours", awsSessionToken = "if you have it")
+    // or
+    provider = openai(apiKey = "yours")
+    
+    // ...
+}
 ```
 
-## TODO
-- MCP Client?
-- CI/CD
-- Console for arbitrary runs?
-- 
+Run the task and watch the AI magic happen:
+```shell
+./gradlew genCalc
+```
+
+You can set specific models and regions for Bedrock on the provider, like:
+```kotlin
+provider = bedrock(model = BedrockModels.AnthropicClaude4Sonnet, region = BedrockRegions.US_EAST_1.regionCode)
+```
